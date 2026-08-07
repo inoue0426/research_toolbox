@@ -1,118 +1,194 @@
 # Research Toolbox
 
-A personal collection of **reusable research utilities, analysis patterns, templates, and infrastructure**.
+Reusable utilities for scientific computing, computational biology, and research workflows.
 
-The goal of this repository is not to store project-specific code. It is to preserve components that are useful across multiple research projects and reduce repeated implementation work.
+The repository now has a **small convenience API** for everyday use while keeping domain modules available for advanced control.
 
-## Principles
+## Install
 
-1. **Reusable over project-specific** — add something here when it is useful beyond a single project.
-2. **Small and composable** — prefer focused utilities over large frameworks.
-3. **Reproducible by default** — utilities should make seeds, versions, splits, and assumptions explicit where relevant.
-4. **Document the scientific intent** — explain what a tool is for, not only how it works.
-5. **Promote only after reuse** — code can live in a project first; move/generalize it here after it proves useful.
-6. **Prefer boring, dependable implementations** — research infrastructure should reduce uncertainty, not create it.
+```bash
+pip install -e .
+```
 
-## Current Utilities
+Optional extras:
+
+```bash
+pip install -e '.[evaluation]'
+pip install -e '.[chemistry]'
+pip install -e '.[visualization]'
+pip install -e '.[all]'
+```
+
+## Recommended API
+
+```python
+import research_toolbox as rt
+```
+
+### Reproducibility
+
+```python
+rt.seed(42)
+```
+
+### Evaluation
+
+```python
+metrics = rt.evaluate_binary(y_true, y_prob)
+summary = rt.summarize_evaluations(all_runs)
+```
+
+### Chemistry
+
+```python
+fp = rt.fingerprint(smiles)
+fps = rt.fingerprints(smiles_list)
+```
+
+Invalid-SMILES behavior remains explicit:
+
+```python
+rt.fingerprint(smiles, on_error="raise")  # default
+rt.fingerprint(smiles, on_error="none")
+rt.fingerprint(smiles, on_error="zero")
+```
+
+### Cache
+
+```python
+cache = rt.open_cache(".cache")
+
+cache["result"] = {"score": 0.91}
+result = cache["result"]
+
+value = cache.get_or_set(
+    "expensive-query",
+    lambda: expensive_function(),
+)
+```
+
+The standalone cache-through helper is also available:
+
+```python
+value = rt.cached_lookup(cache, "key", fetcher)
+```
+
+### Biomedical text
+
+```python
+sections = rt.read_pmc("article.xml")
+
+gene = rt.normalize_gene(" tp53 ")
+drug = rt.normalize_drug("  Erlotinib  ")
+protein = rt.normalize_protein("egfr")
+text = rt.normalize_text("  Some   Text ")
+```
+
+Normalization is intentionally lightweight string normalization, **not biomedical entity resolution**.
+
+### Visualization
+
+Use the short `viz` namespace:
+
+```python
+fig, ax = rt.viz.scatter(
+    y_true,
+    y_pred,
+    xlabel="Observed",
+    ylabel="Predicted",
+    identity_line=True,
+)
+
+rt.viz.save(fig, "figures/prediction")
+```
+
+Other common wrappers:
+
+```python
+rt.viz.line(...)
+rt.viz.bar(...)
+rt.viz.grouped_bar(...)
+rt.viz.box(...)
+rt.viz.heatmap(...)
+```
+
+All plotting helpers return normal Matplotlib `(fig, ax)` objects, so customization remains unrestricted.
+
+Publication defaults are optimized for an Adobe Illustrator workflow:
+
+- Arial-first typography
+- editable PDF/SVG text
+- PDF/PS Type 42 fonts
+- SVG text preserved as text
+- 89 mm single-column and 178 mm double-column presets
+- vector-first export with 600 dpi raster fallback
+
+```python
+paper = rt.viz.FigureConfig(
+    width_mm=89,
+    font_size=8,
+    marker_size=3.5,
+)
+
+fig, ax = rt.viz.scatter(x, y, config=paper)
+rt.viz.save(fig, "figures/figure1", config=paper)
+```
+
+## Domain APIs
+
+The concise API is optional. Existing domain imports remain supported:
+
+```python
+from evaluation import evaluate_binary
+from chemistry import fingerprint
+from caching import open_cache
+from biomed import read_pmc, normalize_gene
+from reproducibility import seed
+from visualization import scatter, save
+```
+
+Long-form function names remain available as well, for example `compute_binary_metrics`, `smiles_to_morgan_fingerprint`, and `seed_everything`.
+
+## Structure
 
 ```text
 research_toolbox/
-├── biomed/
-│   ├── normalization.py      # Lightweight drug/gene/protein string normalization
-│   └── pmc_xml.py            # PubMed Central / JATS XML section extraction
-├── caching/
-│   ├── file_cache.py         # Atomic, JSON-backed file cache
-│   └── lookup.py             # Generic cache-through lookup helper
-├── chemistry/
-│   └── fingerprints.py       # SMILES → Morgan fingerprints (RDKit)
-├── evaluation/
-│   └── classification.py     # Binary classification metrics and run summaries
-├── reproducibility/
-│   └── seeding.py            # Python / NumPy / optional PyTorch seeding
-├── templates/
-│   ├── benchmark.md
-│   ├── experiment.md
-│   └── project.md
-└── README.md
+├── research_toolbox/       # compact public facade (`import research_toolbox as rt`)
+│   ├── api.py
+│   └── viz.py
+├── biomed/                 # PMC XML + biomedical string normalization
+├── caching/                # JSON cache + cache-through lookup
+├── chemistry/              # Morgan fingerprints
+├── evaluation/             # binary classification evaluation
+├── reproducibility/        # seeding / deterministic execution helpers
+├── visualization/          # Illustrator-friendly publication figures
+├── templates/              # experiment / benchmark / project templates
+└── pyproject.toml
 ```
 
-The first utility set was generalized from reusable patterns in the public `drGT` and `DrugAgent` repositories rather than copied verbatim. Project-specific assumptions, paths, display code, and application-specific semantics were removed where possible.
+## API design rules
 
-### Design notes
+1. **Short names for common tasks** — `seed`, `fingerprint`, `evaluate_binary`, `read_pmc`, `viz.scatter`.
+2. **Long names remain available** — useful when explicitness matters.
+3. **No hidden scientific assumptions** — thresholds, invalid-input behavior, and deterministic settings remain configurable.
+4. **Return standard Python/scientific objects** — dictionaries, arrays, DataFrames, and Matplotlib objects rather than custom wrappers unless they add clear value.
+5. **Optional heavy dependencies** — RDKit, Matplotlib, scikit-learn, and PyTorch are only needed for the modules that use them.
+6. **Backwards compatible where practical** — existing module-level APIs remain usable while the facade provides a cleaner default.
 
-- `evaluation/classification.py` separates metric computation from formatting and handles single-class AUROC explicitly.
-- `reproducibility/seeding.py` treats PyTorch as optional and documents the limits of deterministic execution.
-- `chemistry/fingerprints.py` makes invalid-SMILES behavior explicit (`raise`, `none`, or `zero`) instead of silently substituting a vector.
-- `caching/file_cache.py` hashes keys to avoid filename collisions and writes atomically.
-- `caching/lookup.py` can cache negative (`None`) lookups, which is useful for repeated API/database resolution.
-- `biomed/normalization.py` is intentionally string normalization only; it is **not** entity resolution.
-- `biomed/pmc_xml.py` performs heuristic section matching because PMC/JATS section names are not fully standardized.
+## Promotion rule
 
-## Optional Dependencies
+> If a utility is useful across multiple research projects, generalize it here; if it is tightly coupled to one scientific project, keep it in that project.
 
-Most modules use the Python standard library plus common scientific packages. Some utilities require optional packages:
+Before promoting code:
 
-- `evaluation/`: NumPy, pandas, scikit-learn
-- `chemistry/`: NumPy, RDKit
-- `reproducibility/`: NumPy; PyTorch is optional
-- `caching/` and `biomed/`: standard library only
+- remove project-specific paths and constants
+- expose explicit inputs and outputs
+- document assumptions
+- handle obvious failure modes
+- add tests when silent failure could affect scientific conclusions
 
-## What belongs here?
+## Templates
 
-Good candidates:
-
-- bootstrap confidence intervals used across projects
-- repeated model-comparison code
-- reproducible train/validation/test splitting
-- gene identifier conversion helpers
-- standard plotting functions
-- SLURM array-job templates
-- experiment and benchmark templates
-- dataset validation checks
-- small command-line utilities used across repositories
-
-Usually **not** a good fit:
-
-- a complete research project
-- one-off exploratory notebooks
-- raw or processed datasets
-- project-specific configuration
-- code whose assumptions are tightly coupled to one paper
-- unreviewed snippets copied here only because they might be useful someday
-
-## Promotion Rule
-
-> **If I have implemented or copied this for a second research project, consider generalizing it. If I use it for a third, it probably belongs here.**
-
-Before promoting code from a project:
-
-- [ ] remove project-specific paths and constants
-- [ ] make inputs and outputs explicit
-- [ ] document assumptions
-- [ ] add a minimal usage example
-- [ ] handle obvious edge cases
-- [ ] add a lightweight test when failure would silently affect scientific results
-
-## Template Workflow
-
-The templates in [`templates/`](templates/) are meant to make the reasoning behind experiments explicit *before* execution.
-
-- [`experiment.md`](templates/experiment.md) — define a hypothesis, outcomes, and decision criteria before running an experiment
-- [`benchmark.md`](templates/benchmark.md) — design fair model or method comparisons
-- [`project.md`](templates/project.md) — initialize an executable research project from a selected idea
-
-## Relationship to Other Research Repositories
-
-```text
-Paper reading / literature
-        ↓
-Research ideas
-        ↓
-Project repositories
-        ↓
-Repeated useful components
-        ↓
-Research toolbox
-```
-
-When a toolbox component materially changes, downstream projects should pin or record the version/commit they used when reproducibility matters.
+- `templates/experiment.md` — hypothesis, expected outcomes, interpretation, and go/no-go criteria
+- `templates/benchmark.md` — fair model/method comparison design
+- `templates/project.md` — turn a selected research idea into an executable project
