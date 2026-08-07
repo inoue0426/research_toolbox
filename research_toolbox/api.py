@@ -10,11 +10,17 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from biomed import (
+    UniProtClient,
+    UniProtRecord,
     clean_text_for_matching,
     extract_pmc_sections,
+    gene_to_uniprot as _gene_to_uniprot,
+    genes_to_uniprot as _genes_to_uniprot,
     normalize_drug_name,
     normalize_gene_name,
     normalize_protein_name,
+    uniprot_to_gene as _uniprot_to_gene,
+    uniprots_to_gene as _uniprots_to_gene,
 )
 from caching import JSONFileCache, cached_lookup
 from chemistry import smiles_to_morgan_fingerprint, smiles_to_morgan_fingerprints
@@ -82,12 +88,70 @@ def normalize_text(value: str | None) -> str:
     return clean_text_for_matching(value)
 
 
+def gene_to_uniprot(
+    gene: str,
+    *,
+    organism_id: int | None = 9606,
+    reviewed: bool | None = True,
+    all_matches: bool = False,
+    client: UniProtClient | None = None,
+):
+    """Map a gene name to UniProtKB accession(s).
+
+    Defaults to reviewed human entries because gene symbols are organism
+    dependent. Override ``organism_id`` and ``reviewed`` when needed.
+    """
+    return _gene_to_uniprot(
+        gene,
+        organism_id=organism_id,
+        reviewed=reviewed,
+        all_matches=all_matches,
+        client=client,
+    )
+
+
+def genes_to_uniprot(
+    genes: Iterable[str],
+    *,
+    organism_id: int | None = 9606,
+    reviewed: bool | None = True,
+    all_matches: bool = False,
+    client: UniProtClient | None = None,
+):
+    """Map multiple gene names to UniProtKB accession(s)."""
+    return _genes_to_uniprot(
+        genes,
+        organism_id=organism_id,
+        reviewed=reviewed,
+        all_matches=all_matches,
+        client=client,
+    )
+
+
+def uniprot_to_gene(accession: str, *, client: UniProtClient | None = None) -> str | None:
+    """Map one UniProtKB accession to its primary gene name."""
+    return _uniprot_to_gene(accession, client=client)
+
+
+def uniprots_to_gene(
+    accessions: Iterable[str],
+    *,
+    client: UniProtClient | None = None,
+) -> dict[str, str | None]:
+    """Map multiple UniProtKB accessions to primary gene names."""
+    return _uniprots_to_gene(accessions, client=client)
+
+
 __all__ = [
     "JSONFileCache",
+    "UniProtClient",
+    "UniProtRecord",
     "cached_lookup",
     "evaluate_binary",
     "fingerprint",
     "fingerprints",
+    "gene_to_uniprot",
+    "genes_to_uniprot",
     "normalize_drug",
     "normalize_gene",
     "normalize_protein",
@@ -96,4 +160,6 @@ __all__ = [
     "read_pmc",
     "seed",
     "summarize_evaluations",
+    "uniprot_to_gene",
+    "uniprots_to_gene",
 ]

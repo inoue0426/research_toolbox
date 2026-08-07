@@ -2,10 +2,14 @@
 
 from .api import (
     JSONFileCache,
+    UniProtClient,
+    UniProtRecord,
     cached_lookup,
     evaluate_binary,
     fingerprint,
     fingerprints,
+    gene_to_uniprot,
+    genes_to_uniprot,
     normalize_drug,
     normalize_gene,
     normalize_protein,
@@ -14,15 +18,21 @@ from .api import (
     read_pmc,
     seed,
     summarize_evaluations,
+    uniprot_to_gene,
+    uniprots_to_gene,
 )
 from . import viz
 
 __all__ = [
     "JSONFileCache",
+    "UniProtClient",
+    "UniProtRecord",
     "cached_lookup",
     "evaluate_binary",
     "fingerprint",
     "fingerprints",
+    "gene_to_uniprot",
+    "genes_to_uniprot",
     "normalize_drug",
     "normalize_gene",
     "normalize_protein",
@@ -31,5 +41,7 @@ __all__ = [
     "read_pmc",
     "seed",
     "summarize_evaluations",
+    "uniprot_to_gene",
+    "uniprots_to_gene",
     "viz",
 ]

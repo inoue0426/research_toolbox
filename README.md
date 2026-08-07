@@ -2,7 +2,7 @@
 
 Reusable utilities for scientific computing, computational biology, and research workflows.
 
-The repository now has a **small convenience API** for everyday use while keeping domain modules available for advanced control.
+The repository has a **small convenience API** for everyday use while keeping domain modules available for advanced control.
 
 ## Install
 
@@ -73,7 +73,7 @@ The standalone cache-through helper is also available:
 value = rt.cached_lookup(cache, "key", fetcher)
 ```
 
-### Biomedical text
+### Biomedical utilities
 
 ```python
 sections = rt.read_pmc("article.xml")
@@ -85,6 +85,58 @@ text = rt.normalize_text("  Some   Text ")
 ```
 
 Normalization is intentionally lightweight string normalization, **not biomedical entity resolution**.
+
+#### Gene name ↔ UniProtKB
+
+The common human, reviewed-entry case is one call:
+
+```python
+accession = rt.gene_to_uniprot("TP53")
+# "P04637"
+
+gene = rt.uniprot_to_gene("P04637")
+# "TP53"
+```
+
+Batch lookup:
+
+```python
+gene_to_accession = rt.genes_to_uniprot(["TP53", "EGFR", "BRCA1"])
+accession_to_gene = rt.uniprots_to_gene(["P04637", "P00533", "P38398"])
+```
+
+Gene symbols are organism-dependent, so the high-level API defaults to human (`organism_id=9606`). It also defaults to reviewed UniProtKB/Swiss-Prot entries:
+
+```python
+rt.gene_to_uniprot("Tp53", organism_id=10090)       # mouse
+rt.gene_to_uniprot("TP53", reviewed=None)           # reviewed + unreviewed
+rt.gene_to_uniprot("TP53", all_matches=True)        # all matching accessions
+```
+
+For repeated lookups, use a cached client:
+
+```python
+client = rt.UniProtClient(
+    cache=rt.open_cache(".cache/uniprot")
+)
+
+accession = rt.gene_to_uniprot("TP53", client=client)
+gene = rt.uniprot_to_gene("P04637", client=client)
+```
+
+For metadata rather than only the identifier:
+
+```python
+record = client.uniprot_to_record("P04637")
+print(record.accession)
+print(record.gene_name)
+print(record.entry_name)
+print(record.organism_id)
+print(record.reviewed)
+print(record.protein_name)
+```
+
+The implementation uses the public UniProt REST API and returns `None` for a valid query with no matching record. Network/API failures raise `RuntimeError` rather than being silently interpreted as missing biology.
 
 ### Visualization
 
@@ -142,7 +194,12 @@ The concise API is optional. Existing domain imports remain supported:
 from evaluation import evaluate_binary
 from chemistry import fingerprint
 from caching import open_cache
-from biomed import read_pmc, normalize_gene
+from biomed import (
+    gene_to_uniprot,
+    normalize_gene,
+    read_pmc,
+    uniprot_to_gene,
+)
 from reproducibility import seed
 from visualization import scatter, save
 ```
@@ -156,7 +213,7 @@ research_toolbox/
 ├── research_toolbox/       # compact public facade (`import research_toolbox as rt`)
 │   ├── api.py
 │   └── viz.py
-├── biomed/                 # PMC XML + biomedical string normalization
+├── biomed/                 # PMC XML, name normalization, UniProt mapping
 ├── caching/                # JSON cache + cache-through lookup
 ├── chemistry/              # Morgan fingerprints
 ├── evaluation/             # binary classification evaluation
@@ -168,10 +225,10 @@ research_toolbox/
 
 ## API design rules
 
-1. **Short names for common tasks** — `seed`, `fingerprint`, `evaluate_binary`, `read_pmc`, `viz.scatter`.
+1. **Short names for common tasks** — `seed`, `fingerprint`, `evaluate_binary`, `gene_to_uniprot`, `read_pmc`, `viz.scatter`.
 2. **Long names remain available** — useful when explicitness matters.
-3. **No hidden scientific assumptions** — thresholds, invalid-input behavior, and deterministic settings remain configurable.
-4. **Return standard Python/scientific objects** — dictionaries, arrays, DataFrames, and Matplotlib objects rather than custom wrappers unless they add clear value.
+3. **Scientific assumptions stay visible** — organism, review status, thresholds, invalid-input behavior, and deterministic settings remain configurable.
+4. **Return standard Python/scientific objects** — dictionaries, arrays, DataFrames, and Matplotlib objects; small dataclasses are used only when structured metadata adds value.
 5. **Optional heavy dependencies** — RDKit, Matplotlib, scikit-learn, and PyTorch are only needed for the modules that use them.
 6. **Backwards compatible where practical** — existing module-level APIs remain usable while the facade provides a cleaner default.
 

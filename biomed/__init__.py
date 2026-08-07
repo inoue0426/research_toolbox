@@ -1,15 +1,30 @@
 from .normalization import clean_text_for_matching, normalize_drug_name, normalize_gene_name, normalize_protein_name
 from .pmc_xml import extract_pmc_sections
+from .uniprot import (
+    DEFAULT_ORGANISM_ID,
+    UniProtClient,
+    UniProtRecord,
+    gene_to_uniprot,
+    genes_to_uniprot,
+    uniprot_to_gene,
+    uniprots_to_gene,
+)
 
+# Short aliases for the common API.
+read_pmc = extract_pmc_sections
 normalize_drug = normalize_drug_name
 normalize_gene = normalize_gene_name
 normalize_protein = normalize_protein_name
 normalize_text = clean_text_for_matching
-read_pmc = extract_pmc_sections
 
 __all__ = [
+    "DEFAULT_ORGANISM_ID",
+    "UniProtClient",
+    "UniProtRecord",
     "clean_text_for_matching",
     "extract_pmc_sections",
+    "gene_to_uniprot",
+    "genes_to_uniprot",
     "normalize_drug",
     "normalize_drug_name",
     "normalize_gene",
@@ -18,4 +33,6 @@ __all__ = [
     "normalize_protein_name",
     "normalize_text",
     "read_pmc",
+    "uniprot_to_gene",
+    "uniprots_to_gene",
 ]
