@@ -13,20 +13,49 @@ The goal of this repository is not to store project-specific code. It is to pres
 5. **Promote only after reuse** — code can live in a project first; move/generalize it here after it proves useful.
 6. **Prefer boring, dependable implementations** — research infrastructure should reduce uncertainty, not create it.
 
-## Structure
+## Current Utilities
 
 ```text
 research_toolbox/
-├── bioinformatics/     # Gene IDs, expression matrices, pathways, omics utilities
-├── evaluation/        # Metrics, confidence intervals, statistical comparisons
-├── ml/                # Reproducibility, splits, training/evaluation helpers
-├── visualization/     # Reusable research plotting utilities
-├── slurm/             # SLURM scripts and HPC patterns
-├── templates/         # Experiment, benchmark, and project templates
+├── biomed/
+│   ├── normalization.py      # Lightweight drug/gene/protein string normalization
+│   └── pmc_xml.py            # PubMed Central / JATS XML section extraction
+├── caching/
+│   ├── file_cache.py         # Atomic, JSON-backed file cache
+│   └── lookup.py             # Generic cache-through lookup helper
+├── chemistry/
+│   └── fingerprints.py       # SMILES → Morgan fingerprints (RDKit)
+├── evaluation/
+│   └── classification.py     # Binary classification metrics and run summaries
+├── reproducibility/
+│   └── seeding.py            # Python / NumPy / optional PyTorch seeding
+├── templates/
+│   ├── benchmark.md
+│   ├── experiment.md
+│   └── project.md
 └── README.md
 ```
 
-The structure is intentionally minimal. Add subdirectories only when there is a concrete reusable artifact to put in them.
+The first utility set was generalized from reusable patterns in the public `drGT` and `DrugAgent` repositories rather than copied verbatim. Project-specific assumptions, paths, display code, and application-specific semantics were removed where possible.
+
+### Design notes
+
+- `evaluation/classification.py` separates metric computation from formatting and handles single-class AUROC explicitly.
+- `reproducibility/seeding.py` treats PyTorch as optional and documents the limits of deterministic execution.
+- `chemistry/fingerprints.py` makes invalid-SMILES behavior explicit (`raise`, `none`, or `zero`) instead of silently substituting a vector.
+- `caching/file_cache.py` hashes keys to avoid filename collisions and writes atomically.
+- `caching/lookup.py` can cache negative (`None`) lookups, which is useful for repeated API/database resolution.
+- `biomed/normalization.py` is intentionally string normalization only; it is **not** entity resolution.
+- `biomed/pmc_xml.py` performs heuristic section matching because PMC/JATS section names are not fully standardized.
+
+## Optional Dependencies
+
+Most modules use the Python standard library plus common scientific packages. Some utilities require optional packages:
+
+- `evaluation/`: NumPy, pandas, scikit-learn
+- `chemistry/`: NumPy, RDKit
+- `reproducibility/`: NumPy; PyTorch is optional
+- `caching/` and `biomed/`: standard library only
 
 ## What belongs here?
 
@@ -51,9 +80,7 @@ Usually **not** a good fit:
 - code whose assumptions are tightly coupled to one paper
 - unreviewed snippets copied here only because they might be useful someday
 
-## Promotion rule
-
-A practical rule for deciding whether code should move here:
+## Promotion Rule
 
 > **If I have implemented or copied this for a second research project, consider generalizing it. If I use it for a third, it probably belongs here.**
 
@@ -66,7 +93,7 @@ Before promoting code from a project:
 - [ ] handle obvious edge cases
 - [ ] add a lightweight test when failure would silently affect scientific results
 
-## Template workflow
+## Template Workflow
 
 The templates in [`templates/`](templates/) are meant to make the reasoning behind experiments explicit *before* execution.
 
@@ -74,11 +101,7 @@ The templates in [`templates/`](templates/) are meant to make the reasoning behi
 - [`benchmark.md`](templates/benchmark.md) — design fair model or method comparisons
 - [`project.md`](templates/project.md) — initialize an executable research project from a selected idea
 
-## Relationship to other research repositories
-
-This repository should contain **reusable execution infrastructure**.
-
-A useful separation is:
+## Relationship to Other Research Repositories
 
 ```text
 Paper reading / literature
