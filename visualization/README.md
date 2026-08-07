@@ -1,106 +1,176 @@
 # Visualization Utilities
 
-Helpers for making publication-quality Matplotlib figures that are easy to finish in **Adobe Illustrator**.
+A small, opinionated wrapper around Matplotlib for **publication figures that remain easy to edit in Adobe Illustrator**.
 
-## Design goals
+The package is intentionally high-level for common plots, but it always returns normal Matplotlib ``fig``/``ax`` objects so nothing is locked away.
+
+## Defaults
 
 - Arial-first typography
-- editable text in PDF/SVG exports
-- vector-first output for lines, markers, and labels
-- compact journal-style figure sizing
-- minimal axis styling
-- high-resolution raster fallback
+- editable text in PDF/SVG (`pdf.fonttype=42`, `ps.fonttype=42`, `svg.fonttype='none'`)
+- journal-friendly physical widths (89 mm single column, 178 mm double column)
+- minimal axes and outward ticks
+- vector-first PDF/SVG export plus 600 dpi raster fallback
+- no forced color palette: choose colors explicitly when the scientific context requires them
 
-## Recommended workflow
+## Fastest workflow
 
 ```python
+from visualization import scatter_plot, save_figure
+
+fig, ax = scatter_plot(
+    y_true,
+    y_pred,
+    xlabel="Observed",
+    ylabel="Predicted",
+    identity_line=True,
+)
+save_figure(fig, "figures/model_performance")
+```
+
+## Reusable configuration
+
+```python
+from visualization import FigureConfig, scatter_plot, save_figure
+
+paper = FigureConfig(
+    width_mm=89,
+    font_size=8,
+    marker_size=3.5,
+)
+
+fig, ax = scatter_plot(x, y, config=paper)
+save_figure(fig, "figures/figure1", config=paper)
+```
+
+Built-in presets:
+
+```python
+from visualization import SINGLE_COLUMN, DOUBLE_COLUMN
+```
+
+Use ``config.with_updates(...)`` to change only one property.
+
+## Common plots
+
+```python
+from visualization import (
+    line_plot,
+    scatter_plot,
+    bar_plot,
+    grouped_bar_plot,
+    box_plot,
+    heatmap,
+)
+```
+
+All return ``(fig, ax)``. Pass an existing ``ax=...`` when composing panels.
+
+### Line
+
+```python
+fig, ax = line_plot(x, y, xlabel="Epoch", ylabel="Loss")
+```
+
+### Scatter
+
+```python
+fig, ax = scatter_plot(x, y, identity_line=True)
+```
+
+### Bar
+
+```python
+fig, ax = bar_plot(["A", "B", "C"], means, errors=stds)
+```
+
+### Grouped bars
+
+```python
+fig, ax = grouped_bar_plot(
+    ["Dataset 1", "Dataset 2"],
+    {"Baseline": baseline, "Model": model},
+    ylabel="AUROC",
+)
+```
+
+### Box plot
+
+```python
+fig, ax = box_plot(values, labels=["A", "B"], show_points=True)
+```
+
+### Heatmap
+
+```python
+fig, ax = heatmap(
+    matrix,
+    row_labels=genes,
+    col_labels=drugs,
+    colorbar_label="Score",
+)
+```
+
+## Multi-panel figures
+
+```python
+from visualization import DOUBLE_COLUMN, illustrator_style, label_panels
 import matplotlib.pyplot as plt
 
-from visualization import figure_size, illustrator_style, save_figure
-
-with illustrator_style(font_size=8):
-    fig, ax = plt.subplots(figsize=figure_size(89, aspect_ratio=0.75))
-
-    ax.plot(x, y)
-    ax.set_xlabel("Time (h)")
-    ax.set_ylabel("Response")
-
-    save_figure(fig, "figures/figure1")
+with illustrator_style(DOUBLE_COLUMN):
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.0))
+    # plot into axes[0], axes[1]
+    label_panels(axes)
 ```
 
-This writes:
-
-```text
-figures/figure1.pdf
-figures/figure1.svg
-figures/figure1.png
-```
-
-## Illustrator compatibility
-
-The style helper sets:
+Individual labels are also available:
 
 ```python
-pdf.fonttype = 42
-ps.fonttype = 42
-svg.fonttype = "none"
+from visualization import add_panel_label, add_significance_bar
+
+add_panel_label(ax, "A")
+add_significance_bar(ax, 0, 1, y=1.1, text="p < 0.01")
 ```
 
-These settings are intended to preserve text as editable text rather than converting every glyph to a path.
+## Lower-level control
 
-For the most reliable Illustrator workflow:
-
-1. Make sure **Arial is installed** on the machine generating the figure.
-2. Export primarily as **PDF** or **SVG**.
-3. Use PNG/TIFF only when a raster deliverable is required.
-4. Avoid rasterizing artists unless necessary for very large scatter plots, heatmaps, or image-like layers.
-5. Keep scientific labels, legends, and axis text in Matplotlib; make only final layout adjustments in Illustrator when possible.
-
-## Figure widths
-
-Useful starting points:
+For custom plots that are not covered by the wrappers:
 
 ```python
-figure_size(89)   # ~single-column figure
-figure_size(178)  # ~double-column figure
+from visualization import new_figure, style_axis
+
+fig, ax = new_figure()
+ax.plot(...)
+style_axis(ax)
 ```
 
-The exact width requirements vary by journal, so treat these as convenient defaults rather than submission rules.
-
-## Temporary vs global style
-
-Temporary style is safer in notebooks:
+Or use a temporary style context:
 
 ```python
-with illustrator_style():
+from visualization import illustrator_style
+
+with illustrator_style(font_size=7):
     ...
 ```
 
-For a script where all figures should share the same style:
+## Export
 
 ```python
-from visualization import set_illustrator_style
+from visualization import save_figure
 
-set_illustrator_style(font_size=8)
+save_figure(fig, "figures/figure1")
 ```
 
-## Export only selected formats
+Default output:
 
-```python
-save_figure(
-    fig,
-    "figures/figure1",
-    formats=("pdf", "svg"),
-)
+```text
+figure1.pdf
+figure1.svg
+figure1.png
 ```
 
-For raster-heavy figures:
+PDF/SVG are the preferred Illustrator handoff formats. PNG/TIFF are mainly for previews and raster-only submission systems.
 
-```python
-save_figure(
-    fig,
-    "figures/heatmap",
-    formats=("pdf", "tiff"),
-    dpi=600,
-)
-```
+## Design rule
+
+These helpers should remove repetitive formatting code, not replace Matplotlib. If a plot needs specialized scientific encoding, create the plot normally and use the shared style/export helpers around it.
