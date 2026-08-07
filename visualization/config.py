@@ -3,21 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Mapping, Optional
+from typing import Optional
 
 
 @dataclass(frozen=True)
 class FigureConfig:
     """Reusable defaults for publication figures.
 
-    Values are chosen for figures that will usually be exported as PDF/SVG and
-    polished in Adobe Illustrator. Override only what differs for a figure.
+    Typography is intentionally fixed at 10 pt by default so figures are
+    consistent across scripts and remain easy to edit in Adobe Illustrator.
+    Override only non-typographic properties unless there is a specific reason.
     """
 
     width_mm: float = 89.0
     aspect_ratio: float = 0.75
     font_family: str = "Arial"
-    font_size: float = 8.0
+    font_size: float = 10.0
     axes_linewidth: float = 0.8
     line_width: float = 1.2
     marker_size: float = 4.0
@@ -33,7 +34,7 @@ class FigureConfig:
 
 DEFAULT = FigureConfig()
 SINGLE_COLUMN = FigureConfig(width_mm=89.0)
-DOUBLE_COLUMN = FigureConfig(width_mm=178.0, font_size=8.0)
+DOUBLE_COLUMN = FigureConfig(width_mm=178.0)
 
 
 def resolve_config(config: Optional[FigureConfig] = None, **overrides) -> FigureConfig:

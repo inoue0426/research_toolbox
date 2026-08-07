@@ -8,7 +8,7 @@ For everyday use:
 import research_toolbox as rt
 ```
 
-The rendered web version is available at:
+Rendered web version:
 
 - https://inoue0426.github.io/research-toolbox/
 
@@ -17,8 +17,9 @@ The rendered web version is available at:
 | API | Purpose |
 |---|---|
 | `rt.seed(value=42, deterministic=True)` | Seed Python, NumPy, and PyTorch when available. |
-| `rt.evaluate_binary(y_true, y_score, threshold=0.5)` | Compute binary-classification metrics. |
-| `rt.summarize_evaluations(results)` | Aggregate repeated metric dictionaries. |
+| `rt.evaluate_binary(y_true, y_score, threshold=0.5)` | Compute metrics for one binary-prediction run. |
+| `rt.summarize_runs(results)` | Summarize metrics across repeated runs/seeds with mean, standard deviation, and valid count. |
+| `rt.summarize_evaluations(results)` | Backward-compatible alias for `summarize_runs`. |
 | `rt.fingerprint(smiles, **kwargs)` | One Morgan fingerprint. |
 | `rt.fingerprints(smiles, **kwargs)` | Batch Morgan fingerprints. |
 | `rt.open_cache(path='.cache')` | Open a JSON-backed persistent cache. |
@@ -35,9 +36,39 @@ The rendered web version is available at:
 | `rt.UniProtClient(...)` | Reusable UniProt REST client with retry/backoff and optional cache. |
 | `rt.UniProtRecord` | Structured UniProt result record. |
 
+## Evaluation
+
+Use `rt.evaluate_binary(...)` for one run. Use `rt.summarize_runs(...)` only when you have repeated runs, such as multiple random seeds or folds.
+
+```python
+run1 = rt.evaluate_binary(y_true, pred_seed_1)
+run2 = rt.evaluate_binary(y_true, pred_seed_2)
+run3 = rt.evaluate_binary(y_true, pred_seed_3)
+
+summary = rt.summarize_runs([run1, run2, run3])
+```
+
+The summary is a pandas DataFrame indexed by metric with columns:
+
+- `mean` — average across runs
+- `std` — standard deviation across runs
+- `n` — number of non-missing values used
+
+If you only have one prediction run, you usually do **not** need `summarize_runs`; just use the dictionary returned by `rt.evaluate_binary(...)`.
+
+Domain APIs:
+
+- `evaluation.evaluate_binary`
+- `evaluation.compute_binary_metrics`
+- `evaluation.summarize_runs`
+- `evaluation.summarize`
+- `evaluation.summarize_binary_metrics`
+
+`compute_binary_metrics` includes accuracy, balanced accuracy, precision, recall, specificity, F1, F2, G-mean, MCC, Cohen's kappa, Brier score, AUROC, AUPR, and log loss.
+
 ## Gene ↔ UniProt
 
-Default gene lookup is intentionally configured for the common case of reviewed human UniProtKB entries:
+Default gene lookup is configured for reviewed human UniProtKB entries:
 
 ```python
 rt.gene_to_uniprot('TP53')
@@ -62,17 +93,6 @@ record = client.uniprot_to_record('P04637')
 
 `UniProtRecord` exposes `accession`, `gene_name`, `entry_name`, `organism_id`, `reviewed`, and `protein_name`.
 
-## Evaluation
-
-Domain APIs:
-
-- `evaluation.evaluate_binary`
-- `evaluation.compute_binary_metrics`
-- `evaluation.summarize_evaluations`
-- `evaluation.summarize_binary_metrics`
-
-`compute_binary_metrics` includes accuracy, balanced accuracy, precision, recall, specificity, F1, F2, G-mean, MCC, Cohen's kappa, Brier score, AUROC, AUPR, and log loss.
-
 ## Chemistry
 
 Domain APIs:
@@ -81,8 +101,6 @@ Domain APIs:
 - `chemistry.fingerprints`
 - `chemistry.smiles_to_morgan_fingerprint`
 - `chemistry.smiles_to_morgan_fingerprints`
-
-Important options:
 
 ```python
 rt.fingerprint(
@@ -104,40 +122,15 @@ Domain APIs:
 - `caching.open_cache`
 - `caching.cached_lookup`
 
-`JSONFileCache` supports:
-
-- `get(key, default=None)`
-- `set(key, value)`
-- `get_or_set(key, fetcher, cache_none=True)`
-- `contains(key)`
-- `delete(key)`
-- `clear()`
-- `cache[key]`
-- `cache[key] = value`
-- `key in cache`
-- `len(cache)`
+`JSONFileCache` supports `get`, `set`, `get_or_set`, `contains`, `delete`, `clear`, dict-style indexing, membership checks, and `len(cache)`.
 
 ## Biomedical text and normalization
 
-Domain APIs:
-
-- `biomed.read_pmc` / `biomed.extract_pmc_sections`
-- `biomed.normalize_drug` / `biomed.normalize_drug_name`
-- `biomed.normalize_gene` / `biomed.normalize_gene_name`
-- `biomed.normalize_protein` / `biomed.normalize_protein_name`
-- `biomed.normalize_text` / `biomed.clean_text_for_matching`
-- `biomed.gene_to_uniprot`
-- `biomed.genes_to_uniprot`
-- `biomed.uniprot_to_gene`
-- `biomed.uniprots_to_gene`
-- `biomed.UniProtClient`
-- `biomed.UniProtRecord`
+Domain APIs include PMC/JATS section extraction, lightweight drug/gene/protein/text normalization, and UniProt mapping.
 
 The normalization helpers are lightweight string normalization, not entity resolution.
 
 ## Reproducibility
-
-Domain APIs:
 
 - `reproducibility.seed`
 - `reproducibility.seed_everything`
@@ -187,7 +180,11 @@ Export:
 - `export_figure`
 - `rt.viz.save`
 
-Visualization defaults are designed for Adobe Illustrator handoff: Arial-first typography, PDF/PS Type 42 fonts, SVG text preserved as text, vector-first export, and high-resolution raster fallback.
+### Visualization defaults
+
+All shared typography defaults are **Arial, 10 pt**. The same 10 pt default is applied to axes labels, titles, tick labels, legends, panel labels, and other Matplotlib text unless the caller explicitly overrides a specific artist.
+
+Other defaults are designed for Adobe Illustrator handoff: PDF/PS Type 42 fonts, SVG text preserved as text, vector-first export, and 600 dpi raster fallback.
 
 ## Maintenance rule
 

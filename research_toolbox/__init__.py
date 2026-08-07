@@ -18,6 +18,7 @@ from .api import (
     read_pmc,
     seed,
     summarize_evaluations,
+    summarize_runs,
     uniprot_to_gene,
     uniprots_to_gene,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "read_pmc",
     "seed",
     "summarize_evaluations",
+    "summarize_runs",
     "uniprot_to_gene",
     "uniprots_to_gene",
     "viz",

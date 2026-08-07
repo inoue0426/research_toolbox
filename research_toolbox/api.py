@@ -39,13 +39,28 @@ def evaluate_binary(
     *,
     threshold: float = 0.5,
 ) -> dict[str, float]:
-    """Evaluate binary probabilistic predictions."""
+    """Evaluate one binary-prediction run."""
     return compute_binary_metrics(y_true, y_score, threshold=threshold)
 
 
-def summarize_evaluations(results: Iterable[Mapping[str, float]]):
-    """Summarize repeated metric dictionaries with mean/std/count."""
+def summarize_runs(results: Iterable[Mapping[str, float]]):
+    """Summarize metrics from repeated runs with mean, standard deviation, and n.
+
+    Example
+    -------
+    runs = [
+        evaluate_binary(y_true, pred_seed_1),
+        evaluate_binary(y_true, pred_seed_2),
+        evaluate_binary(y_true, pred_seed_3),
+    ]
+    summary = summarize_runs(runs)
+    """
     return summarize_binary_metrics(results)
+
+
+def summarize_evaluations(results: Iterable[Mapping[str, float]]):
+    """Backward-compatible alias for :func:`summarize_runs`."""
+    return summarize_runs(results)
 
 
 def fingerprint(smiles: str, **kwargs):
@@ -96,11 +111,7 @@ def gene_to_uniprot(
     all_matches: bool = False,
     client: UniProtClient | None = None,
 ):
-    """Map a gene name to UniProtKB accession(s).
-
-    Defaults to reviewed human entries because gene symbols are organism
-    dependent. Override ``organism_id`` and ``reviewed`` when needed.
-    """
+    """Map a gene name to UniProtKB accession(s)."""
     return _gene_to_uniprot(
         gene,
         organism_id=organism_id,
@@ -160,6 +171,7 @@ __all__ = [
     "read_pmc",
     "seed",
     "summarize_evaluations",
+    "summarize_runs",
     "uniprot_to_gene",
     "uniprots_to_gene",
 ]
